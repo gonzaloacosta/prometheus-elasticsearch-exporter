@@ -9,6 +9,29 @@ Project to setup Prometheus Monitoring and Grafana to monitor Elasticsearch
 4. Elasticsearch
 6. Elasticsearch Prometheus Exporter
 
+
+## Start lab
+
+```
+docker-compose up -d
+```
+
+## Open Tools
+
+```
+# Grafana
+open http://locahost:3000
+
+# Prometheus
+open http://localhost:9090
+
+# Elasticsearch exporter
+open http://localhost:9114
+
+# Elasticsearch
+curl http://localhost:9200/_cat/health
+```
+
 ## What is the exporter
 
 Learn more about exporters in Prometheus [here](https://prometheus.io/docs/instrumenting/exporters/). 
