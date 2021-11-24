@@ -1,0 +1,116 @@
+version: '3.2'
+
+networks:
+  infranet:
+
+services:
+  centos:
+    privileged: true
+    restart: 'always'
+    image: centos
+    container_name: centos
+    command: [ bash, -c, "while true ; do sleep 100000 ; done" ]
+    networks:
+      infranet:
+        aliases:
+        - 'centos'
+    volumes:
+      - ./centos:/data
+    labels:
+      org.label-schema.group: "monitoring"
+
+  elasticsearch:
+    privileged: true
+    restart: 'always'
+    ports:
+    - '9200:9200'
+    image: elasticsearch:7.11.1
+    container_name: elasticsearch
+    environment:
+      - 'discovery.type=single-node'
+    networks:
+      infranet:
+        aliases:
+        - 'elasticsearch'
+    labels:
+      org.label-schema.group: "monitoring"
+
+  elasticsearch_exporter:
+    privileged: true
+    restart: 'always'
+    ports:
+      - '9114:9114'
+    image: quay.io/prometheuscommunity/elasticsearch-exporter:latest
+    container_name: elasticsearch-exporter
+    command:
+      - '--es.uri=http://elasticsearch:9200'
+  #    - '--es.ssl-skip-verify'
+  #    - '--es.all=true'
+  #    - '--es.indices=true'
+  #    - '--es.cluster_settings'
+  #    - '--es.timeout=20s'
+    depends_on:
+    - elasticsearch
+    networks:
+      infranet:
+        aliases:
+        - elasticsearch-exporter
+    labels:
+      org.label-schema.group: "monitoring"
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    networks:
+      infranet:
+        aliases:
+        - grafana 
+    labels:
+      org.label-schema.group: "monitoring"
+
+  prometheus:
+    privileged: true
+    restart: 'always'
+    ports:
+    - '9090:9090'
+    image: prom/prometheus
+    container_name: prometheus
+    command:
+      - '--config.file=/prometheus/config/prometheus.yaml'
+      - '--storage.tsdb.path=/data'
+    volumes:
+      - ./prometheus/config:/prometheus/config
+      - ./prometheus/data:/data
+    depends_on:
+      - elasticsearch_exporter
+      - elasticsearch_exporter_aqm
+    networks:
+      infranet:
+        aliases:
+        - 'prometheus'
+    labels:
+      org.label-schema.group: "monitoring"
+
+  pushgateway:
+    image: prom/pushgateway:v1.4.2
+    container_name: pushgateway
+    restart: unless-stopped
+    ports:
+    - "9091:9091"
+    networks:
+      infranet:
+        aliases:
+        - 'pushgateway'
+    labels:
+      org.label-schema.group: "monitoring"
