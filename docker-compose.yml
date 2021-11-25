@@ -94,7 +94,6 @@ services:
       - ./prometheus/data:/data
     depends_on:
       - elasticsearch_exporter
-      - elasticsearch_exporter_aqm
     networks:
       infranet:
         aliases:
